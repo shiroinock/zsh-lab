@@ -1,6 +1,7 @@
 static const char shell_init[] =
 "unsetopt BEEP SHARE_HISTORY\n"
-"setopt INTERACTIVE_COMMENTS HIST_IGNORE_SPACE\n"
+"setopt INTERACTIVE_COMMENTS HIST_IGNORE_SPACE BANG_HIST\n"
+"histchars='!^#'\n"
 "bindkey -e\n"
 "HISTFILE=\"$ZDOTDIR/history\"\n"
 "HISTSIZE=1000\n"
