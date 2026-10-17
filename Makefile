@@ -37,10 +37,10 @@ sanitize:
 
 release:
 ifeq ($(UNAME_S),Darwin)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -arch arm64 -arch x86_64 -mmacosx-version-min=11.0 src/app.c $(LDLIBS) -o zsh-lab
+	$(CC) $(CPPFLAGS) $(CFLAGS) -arch arm64 -mmacosx-version-min=11.0 src/app.c $(LDLIBS) -o zsh-lab
 	codesign --force --sign - zsh-lab
 else
-	@echo 'Universal Binary の作成は macOS 上で実行してください。'; exit 1
+	@echo 'macOS arm64 バイナリの作成は macOS 上で実行してください。'; exit 1
 endif
 
 package:

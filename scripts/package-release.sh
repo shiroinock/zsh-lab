@@ -9,16 +9,14 @@ if [ -n "${RELEASE_TAG:-}" ] && [ "$RELEASE_TAG" != "v$version" ]; then
 fi
 make release tests/smoke-ui
 [ "$(./zsh-lab --version)" = "zsh-lab $version" ]
-architectures=" $(lipo -archs zsh-lab) "
-case "$architectures" in *' arm64 '*) ;; *) echo 'arm64 slice missing' >&2; exit 1;; esac
-case "$architectures" in *' x86_64 '*) ;; *) echo 'x86_64 slice missing' >&2; exit 1;; esac
+[ "$(lipo -archs zsh-lab)" = "arm64" ] || { echo 'Expected arm64 binary' >&2; exit 1; }
 codesign --verify --strict zsh-lab
 # Permit only the macOS system libraries in each architecture.
 otool -L zsh-lab | awk '/compatibility version/ {if ($1 != "/usr/lib/libSystem.B.dylib" && $1 != "/usr/lib/libncurses.5.4.dylib") exit 1}'
 mkdir -p dist
 stage=$(mktemp -d)
 trap 'rm -rf "$stage"' EXIT HUP INT TERM
-name="zsh-lab-$version-macos-universal"
+name="zsh-lab-$version-macos-arm64"
 mkdir "$stage/$name"
 cp zsh-lab Start.command README.md LICENSE VERSION "$stage/$name/"
 archive="$PWD/dist/$name.zip"

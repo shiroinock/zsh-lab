@@ -16,12 +16,8 @@ concurrency:
 
 jobs:
   build:
-    name: Test and package (${{ matrix.runner }})
-    strategy:
-      fail-fast: false
-      matrix:
-        runner: [macos-15, macos-15-intel]
-    runs-on: ${{ matrix.runner }}
+    name: Test and package (macOS arm64)
+    runs-on: macos-15
     timeout-minutes: 15
     env:
       LANG: en_US.UTF-8
@@ -38,30 +34,24 @@ jobs:
       - name: Build and test real zsh / vi and the standalone UI
         run: make check
       - name: Check memory safety
-        if: matrix.runner == 'macos-15'
         run: make sanitize
-      - name: Package and verify the extracted Universal Binary
+      - name: Package and verify the extracted arm64 binary
         env:
           RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
         run: make package
       - name: Upload release files
-        if: matrix.runner == 'macos-15'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: macos-release
           path: |
-            dist/zsh-lab-*-macos-universal.zip
+            dist/zsh-lab-*-macos-arm64.zip
             dist/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
 
   nix:
-    name: Nix package (${{ matrix.runner }})
-    strategy:
-      fail-fast: false
-      matrix:
-        runner: [macos-15, macos-15-intel]
-    runs-on: ${{ matrix.runner }}
+    name: Nix package (macOS arm64)
+    runs-on: macos-15
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -99,7 +89,7 @@ jobs:
         run: |
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release create "$RELEASE_TAG" --verify-tag --draft \
-              --title "ZSH LAB $RELEASE_TAG" --notes "macOS Universal Binary (Apple Silicon / Intel). Python・tmux・追加パッケージ不要。"
+              --title "ZSH LAB $RELEASE_TAG" --notes "macOS arm64 binary (Apple Silicon). Python・tmux・追加パッケージ不要。"
           fi
           gh release upload "$RELEASE_TAG" dist/*.zip dist/SHA256SUMS.txt --clobber
       - name: Publish release

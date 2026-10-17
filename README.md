@@ -6,7 +6,7 @@
 
 ## Nix で起動・インストール
 
-macOS（Apple Silicon / Intel）向けの flake を同梱しています。Nix が zsh と ncurses を自動で揃えます。
+macOS（Apple Silicon）向けの flake を同梱しています。Nix が zsh と ncurses を自動で揃えます。
 
 ```sh
 # 一度試す。ZIP の取得・展開は不要
@@ -35,7 +35,7 @@ inputs.zsh-lab.url = "git+https://github.com/shiroinock/zsh-lab?ref=v0.1.1";
 home.packages = [ inputs.zsh-lab.packages.${system}.default ];
 ```
 
-開発時は `nix flake check -L` で、Nix 環境でのビルド・23 課題・配置後の画面操作まで検証できます。Intel Mac をサポートする nixpkgs 26.05 Darwin を `flake.lock` に固定しています。配布 ZIP は従来どおり OS 標準ライブラリだけで動き、Nix は不要です。
+開発時は `nix flake check -L` で、Nix 環境でのビルド・23 課題・配置後の画面操作まで検証できます。nixpkgs 26.05 Darwin を `flake.lock` に固定しています。配布 ZIP は従来どおり OS 標準ライブラリだけで動き、Nix は不要です。
 
 ## バイナリで起動
 
@@ -45,7 +45,7 @@ home.packages = [ inputs.zsh-lab.packages.${system}.default ];
 ./zsh-lab
 ```
 
-- 配布バイナリ：macOS 11 以降、Apple Silicon / Intel 対応（Universal Binary）
+- 配布バイナリ：macOS 11 以降、Apple Silicon 対応（arm64 バイナリ）
 - 必要なもの：ターミナル、zsh（macOS 標準搭載）
 - 画面サイズ：95 列 × 22 行以上、UTF-8
 - 実行ファイル単体を別のフォルダへ移しても動きます。教材はバイナリに内蔵しています。
@@ -105,7 +105,7 @@ home.packages = [ inputs.zsh-lab.packages.${system}.default ];
 
 ```sh
 make             # 開発環境のアーキテクチャ向けにビルド
-make release     # macOS Universal Binary（macOS 上で実行）
+make release     # macOS arm64 バイナリ（macOS 上で実行）
 make test        # 実際の対話 zsh / vi を PTY から操作するテスト
 ```
 
@@ -124,11 +124,11 @@ ZLE の `zle-line-pre-redraw` から `LASTWIDGET` / `BUFFER` / `CURSOR` を観�
 - AddressSanitizer / UndefinedBehaviorSanitizer による検査
 - 配布する単体バイナリでの画面描画・達成表示・課題遷移・ヒント・縮小と復元・終了
 
-ローカルの Apple Silicon と、GitHub Actions の macOS 15（Apple Silicon / Intel）の両方で、23 課題と画面操作・配布 ZIP の展開検証を実行しています。バイナリはアドホック署名済みで、Developer ID による署名・公証は行っていません。
+ローカルの Apple Silicon と、GitHub Actions の macOS 15（Apple Silicon）の両方で、23 課題と画面操作・配布 ZIP の展開検証を実行しています。バイナリはアドホック署名済みで、Developer ID による署名・公証は行っていません。
 
 ## GitHub Actions とリリース
 
-`Build and release` ワークフローで、main への push・Pull Request・手動実行ごとに Apple Silicon / Intel のビルドと実習テストを実行します。Apple Silicon ではメモリ検査も実行します。各アーキテクチャのランナーで Universal Binary の ZIP を作成し、展開した実行ファイルを OS 標準ツールだけの環境で起動して課題操作まで検証します。Apple Silicon で作成した ZIP と SHA-256 は Actions の `macos-release` 成果物から取得できます。
+`Build and release` ワークフローで、main への push・Pull Request・手動実行ごとに Apple Silicon のビルドと実習テストを実行します。Apple Silicon ではメモリ検査も実行します。macOS arm64 ランナーで arm64 バイナリ の ZIP を作成し、展開した実行ファイルを OS 標準ツールだけの環境で起動して課題操作まで検証します。Apple Silicon で作成した ZIP と SHA-256 は Actions の `macos-release` 成果物から取得できます。
 
 バージョンの正本は `VERSION` です。次のリリースでは `VERSION` を変更して main に push し、同じバージョンのタグを push してください。
 
@@ -138,7 +138,7 @@ git tag "v$version"
 git push origin "v$version"
 ```
 
-`v*` タグでは、タグと `VERSION` の一致を検証し、通常ビルドと Nix パッケージの両方が Apple Silicon / Intel で成功してから GitHub Release を作成します。ZIP と `SHA256SUMS.txt` のアップロードが完了してから下書きを公開します。再実行時には同じタグの Release を再利用します。追加の PAT や署名シークレットは不要で、Actions 組み込みの `GITHUB_TOKEN` を使います。配布バイナリはアドホック署名で、Apple の Developer ID 署名・公証は含みません。
+`v*` タグでは、タグと `VERSION` の一致を検証し、通常ビルドと Nix パッケージの両方が Apple Silicon で成功してから GitHub Release を作成します。ZIP と `SHA256SUMS.txt` のアップロードが完了してから下書きを公開します。再実行時には同じタグの Release を再利用します。追加の PAT や署名シークレットは不要で、Actions 組み込みの `GITHUB_TOKEN` を使います。配布バイナリはアドホック署名で、Apple の Developer ID 署名・公証は含みません。
 
 ローカルでも `make package` で同じ ZIP の作成・展開検証・チェックサム作成を実行できます。
 

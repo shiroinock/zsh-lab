@@ -51,7 +51,7 @@ stdenv.mkDerivation {
     description = "Step-by-step terminal practice for zsh, ZLE widgets and key bindings";
     homepage = "https://github.com/shiroinock/zsh-lab";
     license = lib.licenses.mit;
-    platforms = lib.platforms.darwin;
+    platforms = [ "aarch64-darwin" ];
     mainProgram = "zsh-lab";
   };
 }

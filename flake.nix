@@ -5,7 +5,7 @@
 
   outputs = { self, nixpkgs }:
     let
-      systems = [ "aarch64-darwin" "x86_64-darwin" ];
+      systems = [ "aarch64-darwin" ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
     in {
       packages = forAllSystems (system:
