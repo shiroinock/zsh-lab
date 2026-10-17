@@ -1,0 +1,27 @@
+/* Original exercises inspired by the referenced talk. See README.md. */
+static const Lesson lessons[] = {
+  {"home", "行頭へひと跳び", 14, "入力済みの行を Ctrl+A で行頭に移動する。Enter は不要。", "Ctrl+A → beginning-of-line。カーソル位置は先頭が 0。", "print -r -- hello zsh", -1, "", "beginning-of-line", NULL, 0, "", "", ""},
+  {"end", "行末へ戻る", 14, "行頭から Ctrl+E で行末に移動する。", "Ctrl+E → end-of-line。", "print -r -- hello zsh", 0, "", "end-of-line", NULL, 21, "", "", ""},
+  {"back-word", "単語単位で左へ", 18, "Esc を押して離し、b を押す。最後の単語の先頭へ移動する。", "Esc → b。Alt を Meta として送れる端末なら Alt+B でもよい。", "print alpha beta", -1, "", "backward-word", NULL, 12, "", "", ""},
+  {"forward-word", "単語単位で右へ", 18, "Esc → f で次の単語の先頭へ移動する。", "Esc → f → forward-word。", "print alpha beta", 0, "", "forward-word", NULL, 6, "", "", ""},
+  {"kill-word", "単語を削除", 14, "Ctrl+W で最後の beta を削除する。", "Ctrl+W → backward-kill-word。", "print alpha beta", -1, "", "backward-kill-word", "print alpha ", -1, "", "", ""},
+  {"yank", "削除した単語を戻す", 14, "Ctrl+W で beta を削除し、Ctrl+Y で貼り付けて元に戻す。", "削除した文字は kill ring に入る。Ctrl+Y → yank。", "print alpha beta", -1, "", "yank", "print alpha beta", -1, "", "", ""},
+  {"kill-line", "カーソル以降を削除", 14, "Ctrl+K で beta 以降を削除する。", "Ctrl+K → kill-line。", "print alpha beta", 12, "", "kill-line", "print alpha ", -1, "", "", ""},
+  {"undo", "編集を取り消す", 22, "Ctrl+U で行を消してから Ctrl+_ で元に戻す。", "Ctrl+_ は端末によって Ctrl+Shift+-。Ctrl+- でも同じコードを送る端末がある。", "print recovered", -1, "", "undo", "print recovered", -1, "", "", ""},
+  {"last-word", "前の引数を再利用", 19, "Esc → . で直前の履歴の最後の引数を挿入する。", "Esc → . → insert-last-word。手入力ではクリアにならない。", "print ", -1, "print -s print -r -- constellation", "insert-last-word", "print constellation", -1, "", "", ""},
+  {"push-line", "書きかけを退避", 21, "Esc → q でこの行を退避する。続けて print ready を実行すると退避した行が戻る。", "Esc → q → push-line。クリア後も次へ進むまでは自由に試せる。", "print after-break", -1, "", "push-line", "", -1, "", "", ""},
+  {"binding", "キーの割り当てを調べる", 15, "bindkey '^P' を実行して、キーと Widget の対応を確認する。", "右側の達成表示はコマンドの実行が終わってから更新される。", "", -1, "", "", NULL, -1, "bindkey '^P'", "", ""},
+  {"rebind", "自分でキーを割り当てる", 29, "Ctrl+P に history-beginning-search-backward を割り当てる。", "bindkey '^P' history-beginning-search-backward\n設定後 Enter。別のキー表記でも実際の割り当てで判定する。", "", -1, "", "", NULL, -1, "", "bindkey '^P'", "\"^P\" history-beginning-search-backward"},
+  {"history", "前方一致で履歴を探す", 58, "print と入力済み。Ctrl+P で print から始まる履歴を探す。", "間にある pwd の履歴を飛ばして print nebula を呼び出す。", "print", -1, "bindkey '^P' history-beginning-search-backward\nprint -s print nebula\nprint -s pwd", "history-beginning-search-backward", "print nebula", -1, "", "", ""},
+  {"copy-word", "直前の単語を複製", 61, "Esc → m で直前の shell 単語を複製する。", "この課題では bindkey '^[m' copy-prev-shell-word を設定済み。", "print draft.txt ", -1, "bindkey '^[m' copy-prev-shell-word", "copy-prev-shell-word", "print draft.txt draft.txt", -1, "", "", ""},
+  {"redo", "取り消しをやり直す", 63, "Ctrl+W → Ctrl+_ → Esc → / の順に操作する。", "最後に redo が実行され、消した単語が再び消えれば成功。", "print alpha beta", -1, "bindkey '^[/' redo", "redo", "print alpha ", -1, "", "", ""},
+  {"magic", "実行前に履歴展開", 62, "!! の後ろで Space を押し、直前のコマンドを展開する。Enter は不要。", "Space に magic-space を割り当て済み。", "!!", -1, "bindkey ' ' magic-space\nprint -s print starlight", "magic-space", "print starlight ", -1, "", "", ""},
+  {"earlier", "もう一つ前の引数", 20, "Esc → . で最後の引数を挿入し、Esc → , でもう一つ前を呼び出す。", "copy-earlier-word は autoload と zle -N で登録済み。", "print ", -1, "autoload -Uz copy-earlier-word\nzle -N copy-earlier-word\nbindkey '^[,' copy-earlier-word\nprint -s print first second", "copy-earlier-word", "print first", -1, "", "", ""},
+  {"editor", "エディタで行を編集", 66, "Esc → e でエディタを開き、draft を polished に変えて保存・終了する。", "エディタは $EDITOR / $VISUAL、未設定なら vi。vi なら :%s/draft/polished/ → Enter → :wq。", "print draft", -1, "autoload -Uz edit-command-line\nzle -N edit-command-line\nbindkey '^[e' edit-command-line", "edit-command-line", "print polished", -1, "", "", ""},
+  {"widget", "Widget を自作する", 33, "prepend-note 関数を作り、zle -N で登録し、Esc → s に割り当てる。", "prepend-note() { BUFFER=\"# $BUFFER\"; CURSOR=${#BUFFER}; }\nzle -N prepend-note\nbindkey '^[s' prepend-note", "", -1, "", "", NULL, -1, "", "bindkey '^[s'; zle -l -L prepend-note", "\"^[s\" prepend-note\nzle -N prepend-note"},
+  {"use-widget", "自作 Widget を使う", 33, "この行で Esc → s を押し、行頭に # を付ける。", "前の課題の関数を引き継ぐ。未作成なら Ctrl+] → p で戻る。", "print custom", -1, "(( $+functions[prepend-note] )) || prepend-note() { BUFFER=\"# $BUFFER\"; CURSOR=${#BUFFER}; }; zle -N prepend-note; bindkey '^[s' prepend-note", "prepend-note", "# print custom", -1, "", "", ""},
+  {"options", "オプションを試す", 55, "auto_cd と auto_pushd を有効にする。", "setopt auto_cd auto_pushd\n次の課題でディレクトリ名だけで移動してみる。", "", -1, "", "", NULL, -1, "", "print -r -- $options[autocd] $options[autopushd]", "on on"},
+  {"autocd", "名前だけで移動", 55, "練習用の constellation ディレクトリへ、名前だけを入力して移動する。", "constellation → Enter。移動先は練習用ディレクトリの中。", "", -1, "mkdir -p constellation; setopt auto_cd auto_pushd", "", NULL, -1, "constellation", "print -r -- ${PWD:t}", "constellation"},
+  {"prompt", "プロンプトを変える", 53, "PROMPT を lab> に変更し、次のプロンプトで見た目を確かめる。", "PROMPT='lab> '\n実行後、左側の表示も変わる。", "", -1, "", "", NULL, -1, "", "print -r -- \"$PROMPT\"", "lab> "},
+};
+#define NLESSONS ((int)(sizeof(lessons)/sizeof(lessons[0])))

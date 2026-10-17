@@ -1,0 +1,6 @@
+/zsh-lab
+/tests/test-native
+/tests/smoke-ui
+/tests/test-sanitized
+/dist/
+.DS_Store
