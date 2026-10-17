@@ -22,7 +22,7 @@ static bool pump_until(int fd,Terminal*t,const char*expected,double seconds){
  fprintf(stderr,"UI timeout: %s\n",expected);return false;
 }
 int main(int argc,char**argv){
- setlocale(LC_ALL,"");if(argc!=2){fputs("usage: smoke-ui /path/to/zsh-lab\n",stderr);return 2;}
+ configure_locale();if(argc!=2){fputs("usage: smoke-ui /path/to/zsh-lab\n",stderr);return 2;}
  char binary[PATH_MAX];if(!realpath(argv[1],binary)){perror("binary");return 1;}
  char root[]="/tmp/zsh-lab-smoke-XXXXXX";if(!mkdtemp(root)){perror("mkdtemp");return 1;}
  char home[PATH_MAX+8];snprintf(home,sizeof(home),"HOME=%s",root);

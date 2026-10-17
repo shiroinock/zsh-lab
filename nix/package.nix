@@ -1,4 +1,4 @@
-{ lib, stdenv, ncurses, zsh, vim, makeWrapper }:
+{ lib, stdenv, ncurses, zsh, vim, makeWrapper, glibcLocalesUtf8 }:
 stdenv.mkDerivation {
   pname = "zsh-lab";
   version = lib.trim (builtins.readFile ../VERSION);
@@ -19,7 +19,7 @@ stdenv.mkDerivation {
 
   nativeBuildInputs = [ makeWrapper ];
   buildInputs = [ ncurses ];
-  nativeCheckInputs = [ zsh vim ];
+  nativeCheckInputs = [ zsh vim ] ++ lib.optional stdenv.isLinux glibcLocalesUtf8;
 
   doCheck = true;
   checkPhase = ''
@@ -34,7 +34,8 @@ stdenv.mkDerivation {
     mkdir -p "$out/bin" "$out/share/doc/zsh-lab"
     install -m755 zsh-lab "$out/bin/zsh-lab"
     install -m644 README.md LICENSE "$out/share/doc/zsh-lab/"
-    wrapProgram "$out/bin/zsh-lab" --prefix PATH : ${lib.makeBinPath [ zsh ]}
+    wrapProgram "$out/bin/zsh-lab" --prefix PATH : ${lib.makeBinPath [ zsh ]} \
+      ${lib.optionalString stdenv.isLinux "--set-default LOCALE_ARCHIVE ${glibcLocalesUtf8}/lib/locale/locale-archive"}
     runHook postInstall
   '';
 
@@ -51,7 +52,7 @@ stdenv.mkDerivation {
     description = "Step-by-step terminal practice for zsh, ZLE widgets and key bindings";
     homepage = "https://github.com/shiroinock/zsh-lab";
     license = lib.licenses.mit;
-    platforms = [ "aarch64-darwin" ];
+    platforms = [ "aarch64-darwin" "x86_64-linux" ];
     mainProgram = "zsh-lab";
   };
 }

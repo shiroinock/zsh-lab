@@ -44,6 +44,11 @@ typedef struct {
 typedef struct { bool done[NLESSONS];char path[PATH_MAX];bool warning; } Progress;
 static volatile sig_atomic_t stop_requested=0;
 static void stop_handler(int sig){(void)sig;stop_requested=1;}
+static void configure_locale(void){
+ if(setlocale(LC_ALL,"") && MB_CUR_MAX>1)return;
+ const char*choices[]={"en_US.UTF-8","C.UTF-8",NULL};
+ for(int i=0;choices[i];i++)if(setlocale(LC_ALL,choices[i])&&MB_CUR_MAX>1){setenv("LC_ALL",choices[i],1);return;}
+}
 static double now_seconds(void){struct timespec t;clock_gettime(CLOCK_MONOTONIC,&t);return t.tv_sec+t.tv_nsec/1e9;}
 static void pause_ms(int ms){struct timespec t={ms/1000,(ms%1000)*1000000L};nanosleep(&t,NULL);}
 static int write_all(int fd,const void*data,size_t n){
@@ -293,7 +298,7 @@ done:
 }
 #ifndef ZSHLAB_TEST
 int main(int argc,char**argv){
- setlocale(LC_ALL,"");int lesson=-1;const char*progress_path=NULL;
+ configure_locale();int lesson=-1;const char*progress_path=NULL;
  for(int i=1;i<argc;i++){
   if(!strcmp(argv[i],"--list")){for(int j=0;j<NLESSONS;j++)printf("%2d  %s  (slide %d)\n",j+1,lessons[j].title,lessons[j].page);return 0;}
   if(!strcmp(argv[i],"--version")){printf("zsh-lab %s\n", ZSHLAB_VERSION);return 0;}

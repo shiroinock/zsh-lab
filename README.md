@@ -6,7 +6,7 @@
 
 ## Nix で起動・インストール
 
-macOS（Apple Silicon）向けの flake を同梱しています。Nix が zsh と ncurses を自動で揃えます。
+macOS（Apple Silicon）と Linux amd64（x86_64-linux）向けの flake を同梱しています。Nix が zsh と ncurses を自動で揃えます。
 
 ```sh
 # 一度試す。ZIP の取得・展開は不要
@@ -22,20 +22,20 @@ zsh-lab
 バージョンを固定するには次のようにタグを指定します。
 
 ```sh
-nix run 'git+https://github.com/shiroinock/zsh-lab?ref=v0.1.1'
+nix run 'git+https://github.com/shiroinock/zsh-lab?ref=v0.1.2'
 ```
 
 Home Manager / nix-darwin の flake へは次のように追加できます。`inputs.zsh-lab.url` を定義し、そのパッケージを `home.packages` または `environment.systemPackages` に含めてください。
 
 ```nix
 # flake inputs
-inputs.zsh-lab.url = "git+https://github.com/shiroinock/zsh-lab?ref=v0.1.1";
+inputs.zsh-lab.url = "git+https://github.com/shiroinock/zsh-lab?ref=v0.1.2";
 
 # packages を指定するモジュール内（inputs と system を渡す構成の場合）
 home.packages = [ inputs.zsh-lab.packages.${system}.default ];
 ```
 
-開発時は `nix flake check -L` で、Nix 環境でのビルド・23 課題・配置後の画面操作まで検証できます。nixpkgs 26.05 Darwin を `flake.lock` に固定しています。配布 ZIP は従来どおり OS 標準ライブラリだけで動き、Nix は不要です。
+開発時は `nix flake check -L` で、Nix 環境でのビルド・23 課題・配置後の画面操作まで検証できます。nixpkgs 26.05 の固定リビジョンを `flake.lock` に固定しています。配布 ZIP は従来どおり OS 標準ライブラリだけで動き、Nix は不要です。
 
 ## バイナリで起動
 
@@ -109,7 +109,7 @@ make release     # macOS arm64 バイナリ（macOS 上で実行）
 make test        # 実際の対話 zsh / vi を PTY から操作するテスト
 ```
 
-macOS のビルドには Command Line Tools の C コンパイラと make を使います。リンク先は OS 標準の libSystem / libncurses だけです。Linux 向けの条件分岐も含みますが、Linux では curses 開発用パッケージが必要になる場合があり、動作は未検証です。
+macOS のビルドには Command Line Tools の C コンパイラと make を使います。リンク先は OS 標準の libSystem / libncurses だけです。Linux amd64 では Nix 経由のビルド・実習・起動を CI で検証します。Nix を使わずソースからビルドする場合は、C コンパイラ・make・ncurses 開発パッケージ・zsh が必要です。
 
 `forkpty` で起動した zsh の VT 出力を内部の端末画面に反映し、ncurses で左右の領域を描画します。リサイズ、UTF-8 の全角文字、基本的な色、スクロール領域、エディタの代替画面を扱います。一般用途のターミナルエミュレータと同じ全機能を備えているわけではありません。
 
@@ -138,7 +138,7 @@ git tag "v$version"
 git push origin "v$version"
 ```
 
-`v*` タグでは、タグと `VERSION` の一致を検証し、通常ビルドと Nix パッケージの両方が Apple Silicon で成功してから GitHub Release を作成します。ZIP と `SHA256SUMS.txt` のアップロードが完了してから下書きを公開します。再実行時には同じタグの Release を再利用します。追加の PAT や署名シークレットは不要で、Actions 組み込みの `GITHUB_TOKEN` を使います。配布バイナリはアドホック署名で、Apple の Developer ID 署名・公証は含みません。
+`v*` タグでは、タグと `VERSION` の一致を検証し、macOS の通常ビルドと、macOS arm64 / Linux amd64 の Nix パッケージ検証が成功してから GitHub Release を作成します。ZIP と `SHA256SUMS.txt` のアップロードが完了してから下書きを公開します。再実行時には同じタグの Release を再利用します。追加の PAT や署名シークレットは不要で、Actions 組み込みの `GITHUB_TOKEN` を使います。配布バイナリはアドホック署名で、Apple の Developer ID 署名・公証は含みません。
 
 ローカルでも `make package` で同じ ZIP の作成・展開検証・チェックサム作成を実行できます。
 

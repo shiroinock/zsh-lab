@@ -101,4 +101,4 @@ static void test_progress(void){
  Progress p;progress_init(&p,path);CHECK(!p.done[0]);progress_save(&p,0);CHECK(!p.warning);
  Progress q;progress_init(&q,path);CHECK(q.done[0]&&!q.done[1]);remove_tree(root);
 }
-int main(void){setlocale(LC_ALL,"");test_terminal();test_fragmented_sequences();test_router();test_progress();test_exercises();test_guards();fprintf(stderr,"%d assertions, %d failures\n",assertions,failures);return failures?1:0;}
+int main(void){configure_locale();test_terminal();test_fragmented_sequences();test_router();test_progress();test_exercises();test_guards();fprintf(stderr,"%d assertions, %d failures\n",assertions,failures);return failures?1:0;}
