@@ -15,43 +15,45 @@ static void settle(Session*s,Terminal*t,int ms){
  double deadline=now_seconds()+ms/1000.;
  while(now_seconds()<deadline){unsigned char buf[65536];ssize_t n=read(s->fd,buf,sizeof(buf));if(n>0&&t)term_feed(t,buf,(size_t)n,s->fd);session_poll(s);pause_ms(5);}
 }
-static void exercise(int index,const char*before,const char**keys,int n){
+static void exercise(int index,const char**keys,int n){
  Session s;if(session_open(&s,index,29,75)!=0){CHECK(false);return;}Terminal t;term_init(&t,29,75);
  CHECK(wait_session(&s,&t,false,3));
- if(before&&*before){write_all(s.fd,"\025",1);write_all(s.fd,before,strlen(before));write_all(s.fd,"\r",1);settle(&s,&t,100);CHECK(session_load(&s,index)==0);CHECK(wait_session(&s,&t,false,3));}
  for(int i=0;i<n;i++){write_all(s.fd,keys[i],strlen(keys[i]));settle(&s,&t,100);}
  CHECK(wait_session(&s,&t,true,3));
  session_close(&s);term_free(&t);
  fprintf(stderr,"  %2d %-15s %s\n",index+1,lessons[index].id,failures?"checked":"ok");
 }
 static void test_exercises(void){
- const char*a[]={"\001"};exercise(0,NULL,a,1);
- const char*b[]={"\005"};exercise(1,NULL,b,1);
- const char*c[]={"\033b"};exercise(2,NULL,c,1);
- const char*d[]={"\033f"};exercise(3,NULL,d,1);
- const char*e[]={"\027"};exercise(4,NULL,e,1);
- const char*f[]={"\027","\031"};exercise(5,NULL,f,2);
- const char*g[]={"\013"};exercise(6,NULL,g,1);
- const char*h[]={"\025","\037"};exercise(7,NULL,h,2);
- const char*i[]={"\033."};exercise(8,NULL,i,1);
- const char*j[]={"\033q"};exercise(9,NULL,j,1);
- const char*k[]={"bindkey '^P'\r"};exercise(10,NULL,k,1);
- const char*l[]={"bindkey '^P' history-beginning-search-backward\r"};exercise(11,NULL,l,1);
- const char*m[]={"\020"};exercise(12,NULL,m,1);
- const char*n[]={"\033m"};exercise(13,NULL,n,1);
- const char*o[]={"\027","\037","\033/"};exercise(14,NULL,o,3);
- const char*p[]={"!! "};exercise(15,NULL,p,1);
- const char*q[]={"\033.","\033,"};exercise(16,NULL,q,2);
+ const char*a[]={"\001"};exercise(0,a,1);
+ const char*b[]={"\005"};exercise(1,b,1);
+ const char*c[]={"\033b"};exercise(2,c,1);
+ const char*d[]={"\033f"};exercise(3,d,1);
+ const char*e[]={"\027"};exercise(4,e,1);
+ const char*f[]={"\027","\031"};exercise(5,f,2);
+ const char*g[]={"\013"};exercise(6,g,1);
+ const char*h[]={"\025","\037"};exercise(7,h,2);
+ const char*i[]={"\033."};exercise(8,i,1);
+ const char*j[]={"\033q"};exercise(9,j,1);
+ const char*k[]={"bindkey '^P'\r"};exercise(10,k,1);
+ const char*l[]={"bindkey '^P' history-beginning-search-backward\r"};exercise(11,l,1);
+ const char*m[]={"\020"};exercise(12,m,1);
+ const char*n[]={"\033m"};exercise(13,n,1);
+ const char*o[]={"\027","\037","\033/"};exercise(14,o,3);
+ const char*p[]={"!! "};exercise(15,p,1);
+ const char*q[]={"\033.","\033,"};exercise(16,q,2);
  const char*r[]={"\033e",":%s/draft/polished/\r",":wq\r"};
  const char*editor=getenv("ZSHLAB_TEST_EDITOR");if(!editor)editor="/usr/bin/vi -Nu NONE -i NONE";
- char*quoted=shell_quote(editor);char editor_setup[8192];
- snprintf(editor_setup,sizeof(editor_setup),"export EDITOR=%s VISUAL=%s",quoted,quoted);free(quoted);
- exercise(17,editor_setup,r,3);
- const char*s[]={"prepend-note() { BUFFER=\"# $BUFFER\"; CURSOR=${#BUFFER}; }; zle -N prepend-note; bindkey '^[s' prepend-note\r"};exercise(18,NULL,s,1);
- const char*t[]={"\033s"};exercise(19,NULL,t,1);
- const char*u[]={"setopt auto_cd auto_pushd\r"};exercise(20,NULL,u,1);
- const char*v[]={"constellation\r"};exercise(21,NULL,v,1);
- const char*w[]={"PROMPT='lab> '\r"};exercise(22,NULL,w,1);
+ const char*old_editor=getenv("EDITOR"),*old_visual=getenv("VISUAL");
+ char*saved_editor=old_editor?strdup(old_editor):NULL,*saved_visual=old_visual?strdup(old_visual):NULL;
+ setenv("EDITOR",editor,1);setenv("VISUAL",editor,1);
+ exercise(17,r,3);
+ if(saved_editor){setenv("EDITOR",saved_editor,1);free(saved_editor);}else unsetenv("EDITOR");
+ if(saved_visual){setenv("VISUAL",saved_visual,1);free(saved_visual);}else unsetenv("VISUAL");
+ const char*s[]={"prepend-note() { BUFFER=\"# $BUFFER\"; CURSOR=${#BUFFER}; }; zle -N prepend-note; bindkey '^[s' prepend-note\r"};exercise(18,s,1);
+ const char*t[]={"\033s"};exercise(19,t,1);
+ const char*u[]={"setopt auto_cd auto_pushd\r"};exercise(20,u,1);
+ const char*v[]={"constellation\r"};exercise(21,v,1);
+ const char*w[]={"PROMPT='lab> '\r"};exercise(22,w,1);
 }
 static void test_guards(void){
  Session s;CHECK(session_open(&s,8,29,75)==0);CHECK(wait_session(&s,NULL,false,3));
