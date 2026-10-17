@@ -15,9 +15,11 @@ zsh-lab: $(SOURCES)
 	$(CC) $(CPPFLAGS) $(CFLAGS) src/app.c $(LDLIBS) -o $@
 
 tests/test-native: src/tests.c $(SOURCES)
+	@mkdir -p tests
 	$(CC) $(CPPFLAGS) $(CFLAGS) -Wno-unused-function src/tests.c $(LDLIBS) -o $@
 
 tests/smoke-ui: src/smoke.c $(SOURCES)
+	@mkdir -p tests
 	$(CC) $(CPPFLAGS) $(CFLAGS) -Wno-unused-function src/smoke.c $(LDLIBS) -o $@
 
 test: tests/test-native
@@ -29,6 +31,7 @@ smoke: zsh-lab tests/smoke-ui
 check: all test smoke
 
 sanitize:
+	@mkdir -p tests
 	$(CC) $(CPPFLAGS) -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -Wno-unused-function src/tests.c $(LDLIBS) -o tests/test-sanitized
 	./tests/test-sanitized
 
