@@ -22,14 +22,14 @@ zsh-lab
 バージョンを固定するには次のようにタグを指定します。
 
 ```sh
-nix run 'git+https://github.com/shiroinock/zsh-lab?ref=v0.1.2'
+nix run 'git+https://github.com/shiroinock/zsh-lab?ref=refs/tags/v0.1.2'
 ```
 
 Home Manager / nix-darwin の flake へは次のように追加できます。`inputs.zsh-lab.url` を定義し、そのパッケージを `home.packages` または `environment.systemPackages` に含めてください。
 
 ```nix
 # flake inputs
-inputs.zsh-lab.url = "git+https://github.com/shiroinock/zsh-lab?ref=v0.1.2";
+inputs.zsh-lab.url = "git+https://github.com/shiroinock/zsh-lab?ref=refs/tags/v0.1.2";
 
 # packages を指定するモジュール内（inputs と system を渡す構成の場合）
 home.packages = [ inputs.zsh-lab.packages.${system}.default ];
