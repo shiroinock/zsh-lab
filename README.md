@@ -6,7 +6,7 @@
 
 ## 起動
 
-Releases の ZIP を展開し、同梱の `zsh-lab` を実行してください。`Start.command` を開いても起動できます。ソースから利用する場合は下記のビルド手順を使います。
+[Releases](https://github.com/shiroinock/zsh-lab/releases/latest) の ZIP を展開し、同梱の `zsh-lab` を実行してください。`Start.command` を開いても起動できます。ソースから利用する場合は下記のビルド手順を使います。
 
 ```sh
 ./zsh-lab
@@ -91,7 +91,7 @@ ZLE の `zle-line-pre-redraw` から `LASTWIDGET` / `BUFFER` / `CURSOR` を観�
 - AddressSanitizer / UndefinedBehaviorSanitizer による検査
 - 配布する単体バイナリでの画面描画・達成表示・課題遷移・ヒント・縮小と復元・終了
 
-Apple Silicon の macOS で実行を確認しています。Intel のスライスはビルドとリンク構成の確認のみです。バイナリはアドホック署名済みで、Developer ID による署名・公証は行っていません。
+ローカルの Apple Silicon と、GitHub Actions の macOS 15（Apple Silicon / Intel）の両方で、23 課題と画面操作・配布 ZIP の展開検証を実行しています。バイナリはアドホック署名済みで、Developer ID による署名・公証は行っていません。
 
 ## GitHub Actions とリリース
 
