@@ -40,7 +40,7 @@ static void test_exercises(void){
  const char*m[]={"\020"};exercise(12,NULL,m,1);
  const char*n[]={"\033m"};exercise(13,NULL,n,1);
  const char*o[]={"\027","\037","\033/"};exercise(14,NULL,o,3);
- const char*p[]={" "};exercise(15,NULL,p,1);
+ const char*p[]={"!! "};exercise(15,NULL,p,1);
  const char*q[]={"\033.","\033,"};exercise(16,NULL,q,2);
  const char*r[]={"\033e",":%s/draft/polished/\r",":wq\r"};
  exercise(17,"export EDITOR='/usr/bin/vi -Nu NONE -i NONE' VISUAL='/usr/bin/vi -Nu NONE -i NONE'",r,3);
