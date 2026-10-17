@@ -4,7 +4,40 @@
 
 **単体バイナリで動きます。Python・tmux・追加パッケージのインストールは不要です。**
 
-## 起動
+## Nix で起動・インストール
+
+macOS（Apple Silicon / Intel）向けの flake を同梱しています。Nix が zsh と ncurses を自動で揃えます。
+
+```sh
+# 一度試す。ZIP の取得・展開は不要
+nix run 'git+https://github.com/shiroinock/zsh-lab'
+
+# 常用する場合（利用者自身で実行）
+nix profile add 'git+https://github.com/shiroinock/zsh-lab'
+zsh-lab
+```
+
+プライベートリポジトリのため、上記は Git 側の GitHub 認証が使える環境が必要です。`gh auth login` 済みで Git の認証が未設定なら、`gh auth setup-git` で設定できます。Nix の GitHub トークン設定がある場合は、短い形式の `nix run github:shiroinock/zsh-lab` も使えます。GitHub CLI と Nix の GitHub fetcher の認証は別です。
+
+バージョンを固定するには次のようにタグを指定します。
+
+```sh
+nix run 'git+https://github.com/shiroinock/zsh-lab?ref=v0.1.1'
+```
+
+Home Manager / nix-darwin の flake へは次のように追加できます。`inputs.zsh-lab.url` を定義し、そのパッケージを `home.packages` または `environment.systemPackages` に含めてください。
+
+```nix
+# flake inputs
+inputs.zsh-lab.url = "git+https://github.com/shiroinock/zsh-lab?ref=v0.1.1";
+
+# packages を指定するモジュール内（inputs と system を渡す構成の場合）
+home.packages = [ inputs.zsh-lab.packages.${system}.default ];
+```
+
+開発時は `nix flake check -L` で、Nix 環境でのビルド・23 課題・配置後の画面操作まで検証できます。nixpkgs は `flake.lock` に固定しています。配布 ZIP は従来どおり OS 標準ライブラリだけで動き、Nix は不要です。
+
+## バイナリで起動
 
 [Releases](https://github.com/shiroinock/zsh-lab/releases/latest) の ZIP を展開し、同梱の `zsh-lab` を実行してください。`Start.command` を開いても起動できます。ソースから利用する場合は下記のビルド手順を使います。
 
@@ -100,11 +133,12 @@ ZLE の `zle-line-pre-redraw` から `LASTWIDGET` / `BUFFER` / `CURSOR` を観�
 バージョンの正本は `VERSION` です。次のリリースでは `VERSION` を変更して main に push し、同じバージョンのタグを push してください。
 
 ```sh
-git tag v0.1.0
-git push origin v0.1.0
+version=$(cat VERSION)
+git tag "v$version"
+git push origin "v$version"
 ```
 
-`v*` タグでは、タグと `VERSION` の一致を検証し、両方のランナーが成功してから GitHub Release を作成します。ZIP と `SHA256SUMS.txt` のアップロードが完了してから下書きを公開します。再実行時には同じタグの Release を再利用します。追加の PAT や署名シークレットは不要で、Actions 組み込みの `GITHUB_TOKEN` を使います。配布バイナリはアドホック署名で、Apple の Developer ID 署名・公証は含みません。
+`v*` タグでは、タグと `VERSION` の一致を検証し、通常ビルドと Nix パッケージの両方が Apple Silicon / Intel で成功してから GitHub Release を作成します。ZIP と `SHA256SUMS.txt` のアップロードが完了してから下書きを公開します。再実行時には同じタグの Release を再利用します。追加の PAT や署名シークレットは不要で、Actions 組み込みの `GITHUB_TOKEN` を使います。配布バイナリはアドホック署名で、Apple の Developer ID 署名・公証は含みません。
 
 ローカルでも `make package` で同じ ZIP の作成・展開検証・チェックサム作成を実行できます。
 

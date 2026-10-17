@@ -55,10 +55,31 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  nix:
+    name: Nix package (${{ matrix.runner }})
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, macos-15-intel]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@448cde739abec1eaf0646249e3d25bb8d9bc7702 # v31.11.2
+        with:
+          github_access_token: ${{ github.token }}
+      - name: Build, test and launch the Nix package
+        run: |
+          nix flake check -L
+          nix run . -- --version
+          nix run . -- --list
+
   release:
     name: Publish private GitHub Release
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-    needs: build
+    needs: [build, nix]
     runs-on: macos-15
     timeout-minutes: 5
     permissions:

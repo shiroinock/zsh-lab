@@ -43,7 +43,10 @@ static void test_exercises(void){
  const char*p[]={"!! "};exercise(15,NULL,p,1);
  const char*q[]={"\033.","\033,"};exercise(16,NULL,q,2);
  const char*r[]={"\033e",":%s/draft/polished/\r",":wq\r"};
- exercise(17,"export EDITOR='/usr/bin/vi -Nu NONE -i NONE' VISUAL='/usr/bin/vi -Nu NONE -i NONE'",r,3);
+ const char*editor=getenv("ZSHLAB_TEST_EDITOR");if(!editor)editor="/usr/bin/vi -Nu NONE -i NONE";
+ char*quoted=shell_quote(editor);char editor_setup[8192];
+ snprintf(editor_setup,sizeof(editor_setup),"export EDITOR=%s VISUAL=%s",quoted,quoted);free(quoted);
+ exercise(17,editor_setup,r,3);
  const char*s[]={"prepend-note() { BUFFER=\"# $BUFFER\"; CURSOR=${#BUFFER}; }; zle -N prepend-note; bindkey '^[s' prepend-note\r"};exercise(18,NULL,s,1);
  const char*t[]={"\033s"};exercise(19,NULL,t,1);
  const char*u[]={"setopt auto_cd auto_pushd\r"};exercise(20,NULL,u,1);

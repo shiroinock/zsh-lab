@@ -4,3 +4,6 @@
 /tests/test-sanitized
 /dist/
 .DS_Store
+
+/result
+/result-*
