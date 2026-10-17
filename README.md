@@ -35,7 +35,7 @@ inputs.zsh-lab.url = "git+https://github.com/shiroinock/zsh-lab?ref=v0.1.1";
 home.packages = [ inputs.zsh-lab.packages.${system}.default ];
 ```
 
-開発時は `nix flake check -L` で、Nix 環境でのビルド・23 課題・配置後の画面操作まで検証できます。nixpkgs は `flake.lock` に固定しています。配布 ZIP は従来どおり OS 標準ライブラリだけで動き、Nix は不要です。
+開発時は `nix flake check -L` で、Nix 環境でのビルド・23 課題・配置後の画面操作まで検証できます。Intel Mac をサポートする nixpkgs 26.05 Darwin を `flake.lock` に固定しています。配布 ZIP は従来どおり OS 標準ライブラリだけで動き、Nix は不要です。
 
 ## バイナリで起動
 
