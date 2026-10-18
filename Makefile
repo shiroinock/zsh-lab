@@ -7,7 +7,7 @@ LDLIBS = -lncurses
 ifeq ($(UNAME_S),Linux)
 LDLIBS += -lutil
 endif
-SOURCES = src/app.c src/terminal.h src/lessons.h src/shell.h VERSION
+SOURCES = src/app.c src/terminal.h src/lessons.h src/shell.h src/isolation.h VERSION
 
 all: zsh-lab
 

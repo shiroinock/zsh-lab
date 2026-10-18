@@ -56,12 +56,20 @@ static int write_all(int fd,const void*data,size_t n){
  while(n){ssize_t k=write(fd,p,n);if(k<0){if(errno==EINTR)continue;if(errno==EAGAIN||errno==EWOULDBLOCK){fd_set set;FD_ZERO(&set);FD_SET(fd,&set);struct timeval tv={0,100000};select(fd+1,NULL,&set,NULL,&tv);continue;}return -1;}if(k==0)return -1;p+=k;n-=(size_t)k;}return 0;
 }
 static int make_path(char*dst,size_t cap,const char*a,const char*b){int n=snprintf(dst,cap,"%s/%s",a,b);return n<0||(size_t)n>=cap?-1:0;}
+/* Cleanup must never follow a symlink planted by the training shell. */
+static void remove_contents(int fd){
+ DIR*d=fdopendir(dup(fd));if(!d)return;struct dirent*e;
+ while((e=readdir(d))){
+  if(!strcmp(e->d_name,".")||!strcmp(e->d_name,".."))continue;
+  int child=openat(fd,e->d_name,O_RDONLY|O_DIRECTORY|O_NOFOLLOW);
+  if(child>=0){remove_contents(child);close(child);unlinkat(fd,e->d_name,AT_REMOVEDIR);}
+  else unlinkat(fd,e->d_name,0);
+ }
+ closedir(d);
+}
 static void remove_tree(const char*path){
- struct stat st;if(lstat(path,&st)!=0)return;
- if(!S_ISDIR(st.st_mode)){unlink(path);return;}
- DIR*d=opendir(path);if(!d)return;struct dirent*e;
- while((e=readdir(d))){if(!strcmp(e->d_name,".")||!strcmp(e->d_name,".."))continue;char child[PATH_MAX];if(make_path(child,sizeof(child),path,e->d_name)==0)remove_tree(child);}
- closedir(d);rmdir(path);
+ int fd=open(path,O_RDONLY|O_DIRECTORY|O_NOFOLLOW);
+ if(fd<0){unlink(path);return;}remove_contents(fd);close(fd);rmdir(path);
 }
 static char* shell_quote(const char*s){
  size_t n=strlen(s);char*out=malloc(n*4+3);if(!out)return NULL;char*p=out;*p++='\'';
@@ -76,12 +84,14 @@ static int locate_zsh(char*output,size_t cap){
  }
  free(copy);if(access("/bin/zsh",X_OK)==0){snprintf(output,cap,"/bin/zsh");return 0;}return -1;
 }
+#include "isolation.h"
 static int session_prepare(Session*s,int index){
  if(index<0||index>=NLESSONS)return -1;
  s->index=index;s->generation++;s->ready=s->complete=false;s->seen_kill=s->seen_whole=s->seen_undo=false;s->latest[0]=0;
  char path[PATH_MAX],tmp[PATH_MAX];if(make_path(path,sizeof(path),s->root,"lesson.zsh")||make_path(tmp,sizeof(tmp),s->root,"lesson.new"))return -1;
  const Lesson*l=&lessons[index];char*buffer=shell_quote(l->buffer),*probe=shell_quote(l->probe);if(!buffer||!probe){free(buffer);free(probe);return -1;}
- FILE*f=fopen(tmp,"w");if(!f){free(buffer);free(probe);return -1;}
+ int lesson_fd=open(tmp,O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW,0600);
+ FILE*f=lesson_fd>=0?fdopen(lesson_fd,"w"):NULL;if(!f){if(lesson_fd>=0)close(lesson_fd);free(buffer);free(probe);return -1;}
  fprintf(f,"_lab_generation=%d\n%s\n_lab_buffer=%s\n_lab_cursor=%d\n_lab_probe=%s\n",s->generation,l->setup,buffer,l->cursor<0?(int)strlen(l->buffer):l->cursor,probe);
  free(buffer);free(probe);if(fclose(f)!=0)return -1;return rename(tmp,path);
 }
@@ -91,6 +101,9 @@ static int session_open(Session*s,int index,int rows,int cols){
  const char*tmp=getenv("TMPDIR");if(!tmp||!*tmp)tmp="/tmp";
  if(snprintf(s->root,sizeof(s->root),"%s/zsh-lab-XXXXXX",tmp)>=(int)sizeof(s->root))return -1;
  if(!mkdtemp(s->root))return -1;
+ char canonical[PATH_MAX];if(!realpath(s->root,canonical))goto fail;snprintf(s->root,sizeof(s->root),"%s",canonical);
+ char directory[PATH_MAX];make_path(directory,sizeof(directory),s->root,"home");if(mkdir(directory,0700))goto fail;
+ make_path(directory,sizeof(directory),s->root,"tmp");if(mkdir(directory,0700))goto fail;
  char path[PATH_MAX];make_path(path,sizeof(path),s->root,"events");
  int event_write=open(path,O_CREAT|O_WRONLY|O_EXCL,0600);if(event_write<0)goto fail;close(event_write);
  s->events=open(path,O_RDONLY);if(s->events<0)goto fail;
@@ -102,9 +115,7 @@ static int session_open(Session*s,int index,int rows,int cols){
  if(s->pid<0)goto fail;
  if(s->pid==0){
   signal(SIGINT,SIG_DFL);signal(SIGTERM,SIG_DFL);signal(SIGHUP,SIG_DFL);signal(SIGWINCH,SIG_DFL);signal(SIGPIPE,SIG_DFL);
-  close(s->events);setenv("ZDOTDIR",s->root,1);setenv("TERM","xterm-256color",1);unsetenv("ENV");
-  if(chdir(s->root)!=0)_exit(126);
-  execl(s->shell,s->shell,"-d","-i",(char*)NULL);_exit(127);
+  isolated_exec(s);
  }
  fcntl(s->fd,F_SETFL,fcntl(s->fd,F_GETFL)|O_NONBLOCK);return 0;
 fail:
@@ -268,7 +279,7 @@ static int run_app(int index,Progress*progress){
   fd_set set;FD_ZERO(&set);FD_SET(STDIN_FILENO,&set);FD_SET(s->fd,&set);int max=s->fd>STDIN_FILENO?s->fd:STDIN_FILENO;struct timeval tv={0,50000};
   int available=select(max+1,&set,NULL,NULL,&tv);if(available<0){if(errno==EINTR)continue;result=1;break;}
   if(available>0&&FD_ISSET(s->fd,&set)){
-   unsigned char data[65536];ssize_t n=read(s->fd,data,sizeof(data));if(n==0||(n<0&&errno==EIO))break;
+   unsigned char data[65536];ssize_t n=read(s->fd,data,sizeof(data));if(n==0||(n<0&&errno==EIO)){if(!s->ready)result=1;break;}
    if(n>0)term_feed(&terminal,data,(size_t)n,s->fd);else if(errno!=EAGAIN&&errno!=EINTR){result=1;break;}
   }
   if(available>0&&FD_ISSET(STDIN_FILENO,&set)){
@@ -293,8 +304,11 @@ static int run_app(int index,Progress*progress){
   session_poll(s);if(s->complete&&!saved){progress_save(progress,s->index);saved=true;}
   render(s,&terminal,progress,&router,hint,notice,left);
  }
-done:
- session_close(s);free(s);term_free(&terminal);write_all(STDOUT_FILENO,"\033[?2004l",8);endwin();return result;
+done:;
+ bool startup_failed=!s->ready&&result;
+ session_close(s);free(s);term_free(&terminal);write_all(STDOUT_FILENO,"\033[?2004l",8);endwin();
+ if(startup_failed)fputs("隔離した zsh を起動できませんでした。macOS は sandbox-exec、Linux は bubblewrap と user namespace の利用が必要です。\n",stderr);
+ return result;
 }
 #ifndef ZSHLAB_TEST
 int main(int argc,char**argv){

@@ -6,7 +6,7 @@
 
 ## Nix で起動・インストール
 
-macOS（Apple Silicon）と Linux amd64（x86_64-linux）向けの flake を同梱しています。Nix が zsh と ncurses を自動で揃えます。
+macOS（Apple Silicon）と Linux amd64（x86_64-linux）向けの flake を同梱しています。Nix が zsh・ncurses と、Linux では bubblewrap を自動で揃えます。
 
 ```sh
 # 一度試す。ZIP の取得・展開は不要
@@ -22,20 +22,27 @@ zsh-lab
 バージョンを固定するには次のようにタグを指定します。
 
 ```sh
-nix run 'git+https://github.com/shiroinock/zsh-lab?ref=refs/tags/v0.1.2'
+nix run 'git+https://github.com/shiroinock/zsh-lab?ref=refs/tags/v0.2.0'
 ```
 
 Home Manager / nix-darwin の flake へは次のように追加できます。`inputs.zsh-lab.url` を定義し、そのパッケージを `home.packages` または `environment.systemPackages` に含めてください。
 
 ```nix
 # flake inputs
-inputs.zsh-lab.url = "git+https://github.com/shiroinock/zsh-lab?ref=refs/tags/v0.1.2";
+inputs.zsh-lab.url = "git+https://github.com/shiroinock/zsh-lab?ref=refs/tags/v0.2.0";
 
 # packages を指定するモジュール内（inputs と system を渡す構成の場合）
 home.packages = [ inputs.zsh-lab.packages.${system}.default ];
 ```
 
-開発時は `nix flake check -L` で、Nix 環境でのビルド・23 課題・配置後の画面操作まで検証できます。nixpkgs 26.05 の固定リビジョンを `flake.lock` に固定しています。配布 ZIP は従来どおり OS 標準ライブラリだけで動き、Nix は不要です。
+開発時は `nix flake check -L` でビルドを検証できます。Nix のビルド用サンドボックスは OS 隔離の入れ子を許可しないため、実行検証はビルド後に行います。CI でも同じ手順で、配置済みバイナリの 23 課題・隔離・画面操作を検証します。
+
+```sh
+nix build '.#zsh-lab^tests' -o result-tests
+./result-tests/bin/test-native
+./result-tests/bin/smoke-ui "$(nix path-info .#zsh-lab)/bin/zsh-lab"
+```
+nixpkgs 26.05 の固定リビジョンを `flake.lock` に固定しています。配布 ZIP は従来どおり OS 標準ライブラリだけで動き、Nix は不要です。
 
 ## バイナリで起動
 
@@ -95,9 +102,16 @@ home.packages = [ inputs.zsh-lab.packages.${system}.default ];
 
 ## 練習環境
 
-利用者の `.zshrc` は読み込まず、一時的な `ZDOTDIR`、履歴、作業ディレクトリを使って起動します。練習用のキー設定・関数は利用者の設定ファイルには保存しません。進捗ファイルには完了した課題 ID だけを保存します。操作の観測データは一時ディレクトリに置き、通常終了時に削除します。
+練習用 zsh と、その子プロセスを OS のサンドボックス内で実行します。macOS は標準の `sandbox-exec`、Linux は bubblewrap を使います。隔離を有効にできなければシェルは起動しません。Linux は user namespace の利用が必要です。
 
-**OS のサンドボックスではなく、通常の zsh です。** 任意に入力したコマンドは利用者の権限で実行されます。システムの `/etc/zshenv` は zsh の仕様上読み込まれます。起動した外部エディタは、そのエディタ自身の設定に従って動きます。
+- HOME・履歴・一時ファイル・作業場所は、起動ごとに作る練習領域です。利用者の `.zshrc` は読み込みません。
+- 書き込みは練習領域と専用端末に限定します。実際のホームは読み書きできません。絶対パスや symlink を使っても書き込み先の OS 制限が適用されます。
+- ネットワーク接続とホストプロセスへのシグナル送信を遮断します。認証トークン等の環境変数、開いたファイル・ソケットは引き継ぎません。
+- zsh や vi に必要な OS の実行ファイル・ライブラリ・共有データ、Nix store は読み取り専用で利用します。CPU・メモリ消費まで隔離する VM ではありません。
+
+`rm -rf ~` の対象は練習用 HOME です。練習領域を削除すると課題が動かなくなる場合はありますが、アプリを起動し直せば作り直します。外部エディタも同じ制限を受けるため、ホストの設定や GUI サービスが必要なエディタは利用できない場合があります。
+
+アプリ本体は完了した課題 ID を指定の進捗ファイルに保存します。練習用 zsh からこのホスト側の保存先は操作できません。練習領域は終了時に片付けます。
 
 ## 開発・ビルド
 
@@ -109,7 +123,7 @@ make release     # macOS arm64 バイナリ（macOS 上で実行）
 make test        # 実際の対話 zsh / vi を PTY から操作するテスト
 ```
 
-macOS のビルドには Command Line Tools の C コンパイラと make を使います。リンク先は OS 標準の libSystem / libncurses だけです。Linux amd64 では Nix 経由のビルド・実習・起動を CI で検証します。Nix を使わずソースからビルドする場合は、C コンパイラ・make・ncurses 開発パッケージ・zsh が必要です。
+macOS のビルドには Command Line Tools の C コンパイラと make を使います。リンク先は OS 標準の libSystem / libncurses だけです。Linux amd64 では Nix 経由のビルド・実習・起動を CI で検証します。Nix を使わずソースからビルドする場合は、C コンパイラ・make・ncurses 開発パッケージ・zsh・bubblewrap が必要です。
 
 `forkpty` で起動した zsh の VT 出力を内部の端末画面に反映し、ncurses で左右の領域を描画します。リサイズ、UTF-8 の全角文字、基本的な色、スクロール領域、エディタの代替画面を扱います。一般用途のターミナルエミュレータと同じ全機能を備えているわけではありません。
 
@@ -117,6 +131,7 @@ ZLE の `zle-line-pre-redraw` から `LASTWIDGET` / `BUFFER` / `CURSOR` を観�
 
 検証した内容：
 
+- 練習領域外のファイル保護、symlink 経由の書き込み防止、環境変数と FD の初期化、ホストへのシグナル・ネットワーク遮断
 - 23 課題すべての達成経路、手入力だけではクリアしないこと
 - 実際の vi での全画面編集・保存・zsh への復帰
 - キー操作とペーストの分離、履歴、再試行、リサイズ、進捗保存、一時ディレクトリの片付け

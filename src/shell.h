@@ -1,4 +1,5 @@
 static const char shell_init[] =
+"TMPPREFIX=$TMPDIR/zsh\n"
 "unsetopt BEEP SHARE_HISTORY\n"
 "setopt INTERACTIVE_COMMENTS HIST_IGNORE_SPACE BANG_HIST\n"
 "histchars='!^#'\n"

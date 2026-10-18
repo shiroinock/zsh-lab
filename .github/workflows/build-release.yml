@@ -57,7 +57,7 @@ jobs:
         include:
           - runner: macos-15
             system: aarch64-darwin
-          - runner: ubuntu-24.04
+          - runner: ubuntu-22.04
             system: x86_64-linux
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
@@ -71,6 +71,9 @@ jobs:
       - name: Build, test and launch the Nix package
         run: |
           nix flake check -L
+          nix build '.#zsh-lab^tests' -o result-tests
+          ./result-tests/bin/test-native
+          ./result-tests/bin/smoke-ui "$(nix path-info .#zsh-lab)/bin/zsh-lab"
           nix run . -- --version
           nix run . -- --list
 
