@@ -71,7 +71,7 @@ jobs:
       - name: Build, test and launch the Nix package
         run: |
           nix flake check -L
-          nix build '.#zsh-lab^tests' -o result-tests
+          nix build '.#zsh-lab^*'
           ./result-tests/bin/test-native
           ./result-tests/bin/smoke-ui "$(nix path-info .#zsh-lab)/bin/zsh-lab"
           nix run . -- --version

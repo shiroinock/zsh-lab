@@ -38,7 +38,7 @@ home.packages = [ inputs.zsh-lab.packages.${system}.default ];
 開発時は `nix flake check -L` でビルドを検証できます。Nix のビルド用サンドボックスは OS 隔離の入れ子を許可しないため、実行検証はビルド後に行います。CI でも同じ手順で、配置済みバイナリの 23 課題・隔離・画面操作を検証します。
 
 ```sh
-nix build '.#zsh-lab^tests' -o result-tests
+nix build '.#zsh-lab^*'
 ./result-tests/bin/test-native
 ./result-tests/bin/smoke-ui "$(nix path-info .#zsh-lab)/bin/zsh-lab"
 ```
