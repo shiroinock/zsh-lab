@@ -1,0 +1,9 @@
+*
+!VERSION
+!src
+!src/app.c
+!src/isolation.h
+!src/terminal.h
+!src/lessons.h
+!src/shell.h
+!src/tests.c

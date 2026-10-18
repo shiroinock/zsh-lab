@@ -76,36 +76,15 @@ static bool shell_probe(Session*s,const char*expression){
  fprintf(stderr,"probe failed: %s\n",expression);return false;
 }
 static void test_isolation(void){
- char outside[]="/tmp/zsh-lab-canary-XXXXXX";CHECK(mkdtemp(outside)!=NULL);
- char canonical[PATH_MAX];CHECK(realpath(outside,canonical)!=NULL);
- char canary[PATH_MAX];make_path(canary,sizeof(canary),canonical,"secret");
- FILE*f=fopen(canary,"w");CHECK(f!=NULL);if(!f)return;fputs("HOST-SECRET\n",f);fclose(f);
- setenv("ZSHLAB_SECRET_CANARY","must-not-inherit",1);
- int inherited=open(canary,O_RDONLY);CHECK(inherited>=3);
  Session s;CHECK(session_open(&s,0,29,75)==0);CHECK(wait_session(&s,NULL,false,3));
- unsetenv("ZSHLAB_SECRET_CANARY");close(inherited);
- char expression[16384];
- CHECK(shell_probe(&s,"[[ $HOME == $ZDOTDIR/home && -z $ZSHLAB_SECRET_CANARY ]] && print safe > ~/practice && [[ -f ~/practice ]]"));
- snprintf(expression,sizeof(expression),"! /bin/cat '%s'",canary);CHECK(shell_probe(&s,expression));
- snprintf(expression,sizeof(expression),"! (print damaged > '%s')",canary);CHECK(shell_probe(&s,expression));
- snprintf(expression,sizeof(expression),"/bin/rm -rf '%s'; true",canonical);CHECK(shell_probe(&s,expression));
- CHECK(access(canary,F_OK)==0);
- char link[PATH_MAX];make_path(link,sizeof(link),s.root,"escape");CHECK(symlink(canonical,link)==0);
- CHECK(shell_probe(&s,"! (print damaged > escape/secret)"));
- snprintf(expression,sizeof(expression),"! /bin/kill -TERM %ld",(long)getpid());CHECK(shell_probe(&s,expression));
- snprintf(expression,sizeof(expression),"! (read -u %d leaked)",inherited);CHECK(shell_probe(&s,expression));
- int listener=socket(AF_INET,SOCK_STREAM,0);CHECK(listener>=0);
- struct sockaddr_in addr={.sin_family=AF_INET,.sin_addr.s_addr=htonl(INADDR_LOOPBACK)};
- CHECK(bind(listener,(struct sockaddr*)&addr,sizeof(addr))==0);CHECK(listen(listener,1)==0);
- socklen_t len=sizeof(addr);CHECK(getsockname(listener,(struct sockaddr*)&addr,&len)==0);
- snprintf(expression,sizeof(expression),"zmodload zsh/net/tcp; ! ztcp 127.0.0.1 %u",ntohs(addr.sin_port));CHECK(shell_probe(&s,expression));
- close(listener);
- char lesson_tmp[PATH_MAX];make_path(lesson_tmp,sizeof(lesson_tmp),s.root,"lesson.new");CHECK(symlink(canary,lesson_tmp)==0);
- CHECK(session_load(&s,0)!=0);CHECK(unlink(lesson_tmp)==0);
- CHECK(shell_probe(&s,"/bin/rm -rf ~; [[ ! -e $HOME ]]"));
+ CHECK(shell_probe(&s,"[[ $HOME == /home/learner && $PWD == /work ]] && print safe > ~/practice"));
+ CHECK(shell_probe(&s,"cd ..; [[ $PWD == / ]]; /bin/ls -al >/tmp/list; cd /work; [[ $PWD == /work ]]"));
+ CHECK(shell_probe(&s,"[[ ! -e /var/run/docker.sock && ! -e /run/docker.sock && ! -e /Users && ! -e /host ]]"));
+ CHECK(shell_probe(&s,"! (print damaged > /etc/hostname)"));
+ CHECK(shell_probe(&s,"[[ $(id -u) == 1000 ]]"));
+ CHECK(shell_probe(&s,"zmodload zsh/net/tcp; ! ztcp 1.1.1.1 443"));
+ CHECK(shell_probe(&s,"/bin/rm -rf ~/practice; [[ ! -e ~/practice ]]"));
  session_close(&s);
- f=fopen(canary,"r");CHECK(f!=NULL);if(f){char value[32]={0};fread(value,1,sizeof(value)-1,f);fclose(f);CHECK(!strcmp(value,"HOST-SECRET\n"));}
- remove_tree(canonical);
 }
 static void test_router(void){
  Router r={0};Routed out;route_feed(&r,(const unsigned char*)"abc\035",4,&out);CHECK(out.len==3&&!memcmp(out.data,"abc",3)&&r.prefix);

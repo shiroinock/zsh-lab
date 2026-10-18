@@ -307,22 +307,36 @@ static int run_app(int index,Progress*progress){
 done:;
  bool startup_failed=!s->ready&&result;
  session_close(s);free(s);term_free(&terminal);write_all(STDOUT_FILENO,"\033[?2004l",8);endwin();
- if(startup_failed)fputs("隔離した zsh を起動できませんでした。macOS は sandbox-exec、Linux は bubblewrap と user namespace の利用が必要です。\n",stderr);
+ if(startup_failed)fputs("隔離した zsh を起動できませんでした。Docker の練習環境を作り直してください。\n",stderr);
  return result;
 }
+#if !defined(ZSHLAB_CONTAINER_BUILD) && !defined(ZSHLAB_TEST)
+#include "launcher.h"
+#endif
 #ifndef ZSHLAB_TEST
 int main(int argc,char**argv){
- configure_locale();int lesson=-1;const char*progress_path=NULL;
+ configure_locale();
+#ifndef ZSHLAB_CONTAINER_BUILD
+ signal(SIGPIPE,SIG_IGN);
+ if(argc==2&&!strcmp(argv[1],"--prepare"))return prepare_image();
+#endif
+ int lesson=-1;const char*progress_path=NULL;
  for(int i=1;i<argc;i++){
   if(!strcmp(argv[i],"--list")){for(int j=0;j<NLESSONS;j++)printf("%2d  %s  (slide %d)\n",j+1,lessons[j].title,lessons[j].page);return 0;}
   if(!strcmp(argv[i],"--version")){printf("zsh-lab %s\n", ZSHLAB_VERSION);return 0;}
-  if(!strcmp(argv[i],"--help")||!strcmp(argv[i],"-h")){puts("zsh-lab [--lesson N] [--progress PATH] [--list] [--version]\n\ntmux 不要の zsh 練習アプリ。Ctrl+] → h でヒント、q で終了。\nPython / tmux / パッケージのインストールは不要です。");return 0;}
+  if(!strcmp(argv[i],"--help")||!strcmp(argv[i],"-h")){puts("zsh-lab [--lesson N] [--progress PATH] [--list] [--version]\n\ntmux 不要の zsh 練習アプリ。Ctrl+] → h でヒント、q で終了。\nDocker が必要です。初回は練習用イメージを自動で作成します。");return 0;}
   if(!strcmp(argv[i],"--lesson")&&i+1<argc){char*end;long v=strtol(argv[++i],&end,10);if(*end||v<1||v>NLESSONS){fputs("課題番号が範囲外です。\n",stderr);return 2;}lesson=(int)v-1;}
   else if(!strcmp(argv[i],"--progress")&&i+1<argc)progress_path=argv[++i];
   else{fprintf(stderr,"不明な引数: %s\n",argv[i]);return 2;}
  }
  if(!isatty(STDIN_FILENO)||!isatty(STDOUT_FILENO)){fputs("ターミナルから起動してください。\n",stderr);return 2;}
  Progress progress;progress_init(&progress,progress_path);if(lesson<0){lesson=0;for(int i=0;i<NLESSONS;i++)if(!progress.done[i]){lesson=i;break;}}
+#ifdef ZSHLAB_CONTAINER_BUILD
+ const char*completed=getenv("ZSHLAB_COMPLETED");if(completed){char*copy=strdup(completed),*save=NULL;if(copy){for(char*id=strtok_r(copy,":",&save);id;id=strtok_r(NULL,":",&save))for(int i=0;i<NLESSONS;i++)if(!strcmp(id,lessons[i].id))progress.done[i]=true;free(copy);}}
+ FILE*initial=fopen(progress.path,"a");if(initial)fclose(initial);
  return run_app(lesson,&progress);
+#else
+ return docker_launch(lesson,&progress);
+#endif
 }
 #endif

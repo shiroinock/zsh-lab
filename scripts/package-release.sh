@@ -29,6 +29,6 @@ extracted="$stage/verify/$name/zsh-lab"
 [ -x "$extracted" ]
 [ "$("$extracted" --version)" = "zsh-lab $version" ]
 codesign --verify --strict "$extracted"
-./tests/smoke-ui "$extracted"
+if [ "${SKIP_DOCKER_SMOKE:-0}" != 1 ]; then ./tests/smoke-ui "$extracted"; fi
 (cd dist && shasum -a 256 "$name.zip" > SHA256SUMS.txt && shasum -a 256 -c SHA256SUMS.txt)
 printf '\nRelease package: %s\n' "$archive"

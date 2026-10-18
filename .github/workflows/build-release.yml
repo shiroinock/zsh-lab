@@ -32,12 +32,13 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: test "$RELEASE_TAG" = "v$(cat VERSION)"
       - name: Build and test real zsh / vi and the standalone UI
-        run: make check
+        run: make host-check
       - name: Check memory safety
         run: make sanitize
       - name: Package and verify the extracted arm64 binary
         env:
           RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
+          SKIP_DOCKER_SMOKE: '1'
         run: make package
       - name: Upload release files
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -72,8 +73,10 @@ jobs:
         run: |
           nix flake check -L
           nix build '.#zsh-lab^*'
-          ./result-tests/bin/test-native
-          ./result-tests/bin/smoke-ui "$(nix path-info .#zsh-lab)/bin/zsh-lab"
+          if [ "${{ matrix.system }}" = x86_64-linux ]; then
+            ./scripts/check-docker.sh ./result/bin/zsh-lab
+            ./result-tests/bin/smoke-ui ./result/bin/zsh-lab
+          fi
           nix run . -- --version
           nix run . -- --list
 
@@ -100,7 +103,7 @@ jobs:
         run: |
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release create "$RELEASE_TAG" --verify-tag --draft \
-              --title "ZSH LAB $RELEASE_TAG" --notes "macOS arm64 binary (Apple Silicon). Python・tmux・追加パッケージ不要。"
+              --title "ZSH LAB $RELEASE_TAG" --notes "macOS arm64 binary (Apple Silicon). Docker 必須。初回起動時に練習環境を自動作成。"
           fi
           gh release upload "$RELEASE_TAG" dist/*.zip dist/SHA256SUMS.txt --clobber
       - name: Publish release

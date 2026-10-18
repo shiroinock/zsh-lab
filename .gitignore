@@ -9,3 +9,7 @@
 /result-*
 
 /tests/*.dSYM/
+
+/src/image_context.h
+
+/tests/test-launcher

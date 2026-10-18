@@ -1,167 +1,134 @@
 # ZSH LAB
 
-普段のターミナルの中で、本物の zsh を使ってステップごとに練習するアプリです。左に zsh、右に課題とヒントを表示します。
+普段のターミナルの中で、左に本物の zsh、右に課題を表示する練習アプリです。23 課題を、使い捨ての小さな Docker コンテナ内で体験できます。ホストにはネイティブの起動用バイナリを配置します。
 
-**単体バイナリで動きます。Python・tmux・追加パッケージのインストールは不要です。**
+## 起動・インストール
 
-## Nix で起動・インストール
+Docker の Linux エンジンを起動してください。macOS では Docker Desktop / OrbStack などを使えます。Python・tmux は利用時には不要です。
 
-macOS（Apple Silicon）と Linux amd64（x86_64-linux）向けの flake を同梱しています。Nix が zsh・ncurses と、Linux では bubblewrap を自動で揃えます。
+Nix は macOS Apple Silicon と Linux amd64 に対応しています。Docker CLI は Nix が揃えますが、動作中の Docker エンジンは別途必要です。
 
 ```sh
-# 一度試す。ZIP の取得・展開は不要
 nix run 'git+https://github.com/shiroinock/zsh-lab'
 
-# 常用する場合（利用者自身で実行）
 nix profile add 'git+https://github.com/shiroinock/zsh-lab'
 zsh-lab
+
+# 更新
+nix profile upgrade zsh-lab --refresh
 ```
 
-プライベートリポジトリのため、上記は Git 側の GitHub 認証が使える環境が必要です。`gh auth login` 済みで Git の認証が未設定なら、`gh auth setup-git` で設定できます。Nix の GitHub トークン設定がある場合は、短い形式の `nix run github:shiroinock/zsh-lab` も使えます。GitHub CLI と Nix の GitHub fetcher の認証は別です。
+プライベートリポジトリなので Git の GitHub 認証が必要です。`gh auth login` 済みなら `gh auth setup-git` で Git に設定できます。GitHub CLI と Nix の GitHub fetcher の認証は別です。
 
-バージョンを固定するには次のようにタグを指定します。
+バージョンを固定する場合：
 
 ```sh
-nix run 'git+https://github.com/shiroinock/zsh-lab?ref=refs/tags/v0.2.0'
+nix run 'git+https://github.com/shiroinock/zsh-lab?ref=refs/tags/v0.3.0'
 ```
 
-Home Manager / nix-darwin の flake へは次のように追加できます。`inputs.zsh-lab.url` を定義し、そのパッケージを `home.packages` または `environment.systemPackages` に含めてください。
+Home Manager / nix-darwin でも、flake input を追加してパッケージを指定できます。
 
 ```nix
-# flake inputs
-inputs.zsh-lab.url = "git+https://github.com/shiroinock/zsh-lab?ref=refs/tags/v0.2.0";
-
-# packages を指定するモジュール内（inputs と system を渡す構成の場合）
+inputs.zsh-lab.url = "git+https://github.com/shiroinock/zsh-lab?ref=refs/tags/v0.3.0";
+# inputs と system を渡したモジュール内
 home.packages = [ inputs.zsh-lab.packages.${system}.default ];
 ```
 
-開発時は `nix flake check -L` でビルドを検証できます。Nix のビルド用サンドボックスは OS 隔離の入れ子を許可しないため、実行検証はビルド後に行います。CI でも同じ手順で、配置済みバイナリの 23 課題・隔離・画面操作を検証します。
+macOS Apple Silicon では [Releases](https://github.com/shiroinock/zsh-lab/releases/latest) の ZIP にある `zsh-lab`、または `Start.command` からも起動できます。Docker CLI が PATH にある環境で実行してください。macOS 11 以降向けの arm64 バイナリです。
 
 ```sh
-nix build '.#zsh-lab^*'
-./result-tests/bin/test-native
-./result-tests/bin/smoke-ui "$(nix path-info .#zsh-lab)/bin/zsh-lab"
-```
-nixpkgs 26.05 の固定リビジョンを `flake.lock` に固定しています。配布 ZIP は従来どおり OS 標準ライブラリだけで動き、Nix は不要です。
-
-## バイナリで起動
-
-[Releases](https://github.com/shiroinock/zsh-lab/releases/latest) の ZIP を展開し、同梱の `zsh-lab` を実行してください。`Start.command` を開いても起動できます。ソースから利用する場合は下記のビルド手順を使います。
-
-```sh
-./zsh-lab
+zsh-lab --prepare         # 対話画面を開かず、初回のイメージ作成だけを行う
+zsh-lab --list
+zsh-lab --lesson 9
+zsh-lab --progress /path/to/progress.txt
+zsh-lab --version
+zsh-lab --help
 ```
 
-- 配布バイナリ：macOS 11 以降、Apple Silicon 対応（arm64 バイナリ）
-- 必要なもの：ターミナル、zsh（macOS 標準搭載）
-- 画面サイズ：95 列 × 22 行以上、UTF-8
-- 実行ファイル単体を別のフォルダへ移しても動きます。教材はバイナリに内蔵しています。
+画面は UTF-8、95 列 × 22 行以上を使ってください。
+
+## 初回の環境作成
+
+起動用バイナリには Dockerfile と教材・アプリのビルド用ソースが入っています。ソースのチェックアウトは不要です。初回に `zsh-lab-workshop:0.3.0` をローカルで作成し、次回以降は再利用します。初回のダウンロードとビルドにはネットワークが必要です。
+
+ベースは Docker Hub 公式の Alpine Linux 3.22 で、マルチアーキテクチャの digest を固定しています。zsh・Vim 等は Alpine 公式パッケージ配布元から取得します。ビルド用のコンパイラ等は別ステージに置き、実行イメージには含めません。詳細は `container/Dockerfile` を参照してください。
+
+Dockerfile を変更して開発中に同じバージョンのイメージを作り直す場合：
 
 ```sh
-./zsh-lab --list           # 課題一覧
-./zsh-lab --lesson 9       # 指定課題から開始
-./zsh-lab --help
+docker build --target runtime -t "zsh-lab-workshop:$(cat VERSION)" -f container/Dockerfile .
 ```
 
 ## 練習の進め方
 
-1. 右に表示される課題に沿って、左の zsh を操作します。
-2. 指定の Widget と編集結果が一致すると「クリア」と表示します。Enter が不要な課題は、そのまま次へ進めます。
-3. **Ctrl+] を押して離し、n** で次へ進みます。
+右の課題に沿って左の zsh を操作します。指定の Widget と編集結果が一致すると「クリア」と表示し、次の課題へ進めます。Enter が不要な課題はそのまま進めます。
 
 | キー | 操作 |
 |---|---|
 | Ctrl+] → n | クリアしたら次へ |
 | Ctrl+] → h | ヒント表示 / 非表示 |
-| Ctrl+] → r | 現在の課題の入力をやり直す |
+| Ctrl+] → r | 現在の課題をやり直す |
 | Ctrl+] → p | 前の課題を復習 |
 | Ctrl+] → q | 終了 |
 | Ctrl+] → Ctrl+] | Ctrl+] を zsh に渡す |
 
-`Esc → b` は Esc を押して離してから b を押す、という意味です。Alt / Option を Meta として送れる端末なら Alt+B でも操作できます。
+`Esc → b` は Esc を押して離してから b を押すという意味です。Alt / Option を Meta として送れる端末なら Alt+B でも操作できます。エディタ課題ではコンテナ内の Vim を開きます。ホストのエディタ設定は使いません。
 
-エディタの課題では `$VISUAL` / `$EDITOR` を使い、未設定なら vi を開きます。エディタを保存して閉じてから次へ進んでください。任意の外部エディタの全機能への互換性は未検証ですが、macOS の vi で実際の全画面編集と復帰を検証しています。
-
-進捗は `${XDG_STATE_HOME:-~/.local/state}/zsh-lab/progress.txt` に保存し、次回は最初の未完了課題から再開します。`--progress PATH` で保存先を指定できます。課題ごとの初期入力はやり直せますが、練習中に自分で変更したキー設定・関数・オプションは同じ zsh 内に残ります。アプリを新しく起動すると初期状態に戻ります。
-
-## 実習の範囲
-
-23 課題を用意しています。
-
-- 行頭・行末・単語単位の移動
-- 削除、yank、undo / redo
-- 直前の引数の再利用、さらに前の引数の呼び出し
-- 書きかけの行の退避
-- bindkey による確認・割り当て、前方一致の履歴検索
-- 単語の複製、magic-space
-- 同梱 Widget とエディタ連携
-- BUFFER / CURSOR を使った Widget 自作
-- auto_cd / auto_pushd、プロンプト変更
-
-この初版はスライドの全ページを実習化したものではありません。zeno.zsh の導入・スニペット・外部補完、zsh-bench、複数タブの履歴共有などは未収録です。
+進捗はホストの `${XDG_STATE_HOME:-~/.local/state}/zsh-lab/progress.txt` に、完了した課題 ID だけを保存します。終了時にコンテナ側から認識済みの課題 ID だけを取り出します。ホストの進捗ファイルをコンテナにはマウントしません。起動時に以前の完了状況を引き継ぎ、最初の未完了課題から再開します。
 
 ## 練習環境
 
-練習用 zsh と、その子プロセスを OS のサンドボックス内で実行します。macOS は標準の `sandbox-exec`、Linux は bubblewrap を使います。隔離を有効にできなければシェルは起動しません。Linux は user namespace の利用が必要です。
+TUI と zsh の両方をコンテナ内で実行します。コンテナ作成に失敗した場合、ホストの zsh に切り替えることはありません。
 
-- HOME・履歴・一時ファイル・作業場所は、起動ごとに作る練習領域です。利用者の `.zshrc` は読み込みません。
-- 書き込みは練習領域と専用端末に限定します。実際のホームは読み書きできません。絶対パスや symlink を使っても書き込み先の OS 制限が適用されます。
-- ネットワーク接続とホストプロセスへのシグナル送信を遮断します。認証トークン等の環境変数、開いたファイル・ソケットは引き継ぎません。
-- zsh や vi に必要な OS の実行ファイル・ライブラリ・共有データ、Nix store は読み取り専用で利用します。CPU・メモリ消費まで隔離する VM ではありません。
+- ホストのホーム・作業フォルダ・Docker ソケットはマウントしません。ホストのトークン・SSH ソケット・シェル設定は渡しません。
+- HOME は `/home/learner`、作業場所は `/work`。`cd /` や `ls /` で見えるのはコンテナ自身のファイルです。
+- 一般ユーザー UID 1000 で実行し、capability を全て落とし、権限昇格を禁止します。
+- ネットワークは `none`。PID・IPC 等もホストと共有しません。
+- ルートファイルシステムは読み取り専用。`/work`・HOME・`/tmp` はサイズ制限付きの一時領域です。
+- CPU は 1、メモリは 256 MiB、プロセス数は 64、ファイルサイズは 1 MiB に制限します。
+- 進捗の受け渡しにだけ匿名 Docker ボリュームを使い、終了時にコンテナと一緒に削除します。
 
-`rm -rf ~` の対象は練習用 HOME です。練習領域を削除すると課題が動かなくなる場合はありますが、アプリを起動し直せば作り直します。外部エディタも同じ制限を受けるため、ホストの設定や GUI サービスが必要なエディタは利用できない場合があります。
+`rm -rf ~` の対象もコンテナ内の HOME です。練習環境を壊した場合は終了して起動し直してください。強制終了や Docker の異常停止で残ったコンテナは `io.github.shiroinock.zsh-lab.session=true` ラベルで識別できます。Docker イメージとビルドキャッシュは次回起動用に残します。
 
-アプリ本体は完了した課題 ID を指定の進捗ファイルに保存します。練習用 zsh からこのホスト側の保存先は操作できません。練習領域は終了時に片付けます。
+## 実習の範囲
 
-## 開発・ビルド
+行頭・行末・単語移動、削除・yank・undo / redo、履歴・引数の再利用、書きかけの行の退避、bindkey、前方一致履歴検索、単語複製、magic-space、エディタ連携、Widget 自作、auto_cd / auto_pushd、プロンプト変更を扱います。
 
-アプリは C で実装し、外部ライブラリの取得やコード生成は不要です。教材とシェル初期化コードは `src/` に含まれます。
+スライドの全ページを実習化したものではありません。zeno.zsh、外部補完、zsh-bench、複数タブの履歴共有などは未収録です。
 
-```sh
-make             # 開発環境のアーキテクチャ向けにビルド
-make release     # macOS arm64 バイナリ（macOS 上で実行）
-make test        # 実際の対話 zsh / vi を PTY から操作するテスト
-```
+## 開発・検証
 
-macOS のビルドには Command Line Tools の C コンパイラと make を使います。リンク先は OS 標準の libSystem / libncurses だけです。Linux amd64 では Nix 経由のビルド・実習・起動を CI で検証します。Nix を使わずソースからビルドする場合は、C コンパイラ・make・ncurses 開発パッケージ・zsh・bubblewrap が必要です。
-
-`forkpty` で起動した zsh の VT 出力を内部の端末画面に反映し、ncurses で左右の領域を描画します。リサイズ、UTF-8 の全角文字、基本的な色、スクロール領域、エディタの代替画面を扱います。一般用途のターミナルエミュレータと同じ全機能を備えているわけではありません。
-
-ZLE の `zle-line-pre-redraw` から `LASTWIDGET` / `BUFFER` / `CURSOR` を観測し、標準 Widget を置き換えずに判定します。設定課題はコマンド実行後の設定値で判定します。課題を切り替える際は観測データの世代を分け、前の課題の操作を誤って判定に使わないようにしています。
-
-検証した内容：
-
-- 練習領域外のファイル保護、symlink 経由の書き込み防止、環境変数と FD の初期化、ホストへのシグナル・ネットワーク遮断
-- 23 課題すべての達成経路、手入力だけではクリアしないこと
-- 実際の vi での全画面編集・保存・zsh への復帰
-- キー操作とペーストの分離、履歴、再試行、リサイズ、進捗保存、一時ディレクトリの片付け
-- UTF-8 / 制御シーケンスの分割受信と不規則な入力
-- AddressSanitizer / UndefinedBehaviorSanitizer による検査
-- 配布する単体バイナリでの画面描画・達成表示・課題遷移・ヒント・縮小と復元・終了
-
-ローカルの Apple Silicon と、GitHub Actions の macOS 15（Apple Silicon）の両方で、23 課題と画面操作・配布 ZIP の展開検証を実行しています。バイナリはアドホック署名済みで、Developer ID による署名・公証は行っていません。
-
-## GitHub Actions とリリース
-
-`Build and release` ワークフローで、main への push・Pull Request・手動実行ごとに Apple Silicon のビルドと実習テストを実行します。Apple Silicon ではメモリ検査も実行します。macOS arm64 ランナーで arm64 バイナリ の ZIP を作成し、展開した実行ファイルを OS 標準ツールだけの環境で起動して課題操作まで検証します。Apple Silicon で作成した ZIP と SHA-256 は Actions の `macos-release` 成果物から取得できます。
-
-バージョンの正本は `VERSION` です。次のリリースでは `VERSION` を変更して main に push し、同じバージョンのタグを push してください。
+C コンパイラ・make・Python 3・ncurses 開発ライブラリを使います。Python は Docker ビルド用ソースのバイナリへの埋め込みにだけ使います。Docker 内でアプリをビルドするため、ホストの zsh は不要です。
 
 ```sh
-version=$(cat VERSION)
-git tag "v$version"
-git push origin "v$version"
+make host-check  # ホスト側ランチャーと進捗受信の境界チェック
+make check       # 上記 + Docker 内の全課題 + ホストからの画面操作
+make sanitize    # ホスト側の AddressSanitizer / UndefinedBehaviorSanitizer
+make package     # macOS arm64 の署名・ZIP・展開・Docker 起動検証
 ```
 
-`v*` タグでは、タグと `VERSION` の一致を検証し、macOS の通常ビルドと、macOS arm64 / Linux amd64 の Nix パッケージ検証が成功してから GitHub Release を作成します。ZIP と `SHA256SUMS.txt` のアップロードが完了してから下書きを公開します。再実行時には同じタグの Release を再利用します。追加の PAT や署名シークレットは不要で、Actions 組み込みの `GITHUB_TOKEN` を使います。配布バイナリはアドホック署名で、Apple の Developer ID 署名・公証は含みません。
+```sh
+nix flake check -L
+nix build '.#zsh-lab^*'
+./scripts/check-docker.sh ./result/bin/zsh-lab
+./result-tests/bin/smoke-ui ./result/bin/zsh-lab
+```
 
-ローカルでも `make package` で同じ ZIP の作成・展開検証・チェックサム作成を実行できます。
+Nix ビルド内では Docker エンジンを使用せず、ホスト側のチェックと検証用バイナリの作成を行います。Docker 実行テストは完成した成果物で行います。
+
+PTY と内部 VT パーサーで zsh の画面を表示し、ncurses で左右を描画します。ZLE の `LASTWIDGET`・`BUFFER`・`CURSOR` と、コマンド実行後の設定値を観測して達成を判定します。通常のターミナルエミュレータと同じ全機能を備えているわけではありません。
+
+## Actions・リリース
+
+main push・PR・手動実行で macOS arm64 のバイナリと両 OS の Nix パッケージをビルドします。Linux amd64 の Docker エンジンで全23課題、Vim、隔離、完成済みランチャーからの描画・達成・遷移・ヒント・リサイズ・進捗保存・終了を検証します。macOS ランナーには Docker エンジンがないため ZIP の Docker 起動チェックを省略し、ローカルの Apple Silicon + OrbStack でも検証します。
+
+`VERSION` と一致する `v*` タグで、全ジョブ成功後にプライベート GitHub Release を作成します。ZIP と `SHA256SUMS.txt` を添付してから公開します。追加の PAT は不要です。macOS バイナリはアドホック署名で、Developer ID 署名・公証は含みません。
 
 ## 参照元・ライセンス
 
-次の発表を参考に、課題文と練習環境を独自に作成しました。発表者・発表元による公式アプリではありません。スライドの文章・画像は同梱していません。課題ごとに参考となるスライド番号を表示します。
+mozumasu / PartnerProp「[zsh から学ぶ最高の UX](https://partner-prop.github.io/slides/mozumasu/terminal-night-3/1)」Terminal Night 3、2026-10-15 を参考に独自の教材を作りました。公式アプリではなく、スライドの文章・画像は同梱していません。
 
-- mozumasu / PartnerProp「[zsh から学ぶ最高の UX](https://partner-prop.github.io/slides/mozumasu/terminal-night-3/1)」Terminal Night 3、2026-10-15
-- [zsh: Zsh Line Editor](https://zsh.sourceforge.io/Doc/Release/Zsh-Line-Editor.html)
+- [Zsh Line Editor](https://zsh.sourceforge.io/Doc/Release/Zsh-Line-Editor.html)
+- [Docker run](https://docs.docker.com/reference/cli/docker/container/run/)
 
 MIT License。ソースは `src/`、ライセンスは `LICENSE` を参照してください。

@@ -1,7 +1,7 @@
 #define ZSHLAB_TEST
 #include "app.c"
 
-/* Launch the shipped executable in an empty directory with only OS tools in PATH. */
+/* Exercise the host launcher through Docker using the caller's Docker context. */
 static bool screen_contains(Terminal*t,const char*needle){
  char *text=calloc((size_t)t->rows*t->cols*24+1,1);if(!text)return false;
  size_t n=0;
@@ -25,11 +25,10 @@ int main(int argc,char**argv){
  configure_locale();if(argc!=2){fputs("usage: smoke-ui /path/to/zsh-lab\n",stderr);return 2;}
  char binary[PATH_MAX];if(!realpath(argv[1],binary)){perror("binary");return 1;}
  char root[]="/tmp/zsh-lab-smoke-XXXXXX";if(!mkdtemp(root)){perror("mkdtemp");return 1;}
- char home[PATH_MAX+8];snprintf(home,sizeof(home),"HOME=%s",root);
- char*env[]={"PATH=/usr/bin:/bin","TERM=xterm-256color","LANG=en_US.UTF-8",home,NULL};
+ char progress[PATH_MAX];snprintf(progress,sizeof(progress),"%s/progress.txt",root);
  int fd;struct winsize ws={.ws_row=32,.ws_col=130};pid_t pid=forkpty(&fd,NULL,NULL,&ws);
  if(pid<0){perror("forkpty");remove_tree(root);return 1;}
- if(pid==0){chdir(root);char*args[]={binary,"--lesson","1","--progress","progress.txt",NULL};execve(binary,args,env);_exit(127);}
+ if(pid==0){if(chdir(root))_exit(126);execl(binary,binary,"--lesson","1","--progress",progress,(char*)NULL);_exit(127);}
  Terminal t;term_init(&t,32,130);bool ok=true;
 #define STEP(expr) do{if(!(expr)){fprintf(stderr,"UI assertion failed: %s\n",#expr);ok=false;goto cleanup;}}while(0)
  STEP(pump_until(fd,&t,"行頭へひと跳び",15));
@@ -47,9 +46,10 @@ int main(int argc,char**argv){
    exited=waitpid(pid,&status,WNOHANG);if(exited==pid)break;
   }
   STEP(exited==pid);pid=0;STEP(WIFEXITED(status)&&WEXITSTATUS(status)==0);
+  Progress saved;progress_init(&saved,progress);STEP(saved.done[0]);
  }
 cleanup:
  if(pid>0){kill(pid,SIGTERM);pause_ms(100);kill(pid,SIGKILL);waitpid(pid,NULL,0);}close(fd);term_free(&t);remove_tree(root);
- if(ok)puts("UI smoke passed: standalone binary, OS-only PATH, Ctrl+A, next, hint, resize, exit");
+ if(ok)puts("UI smoke passed: Docker launcher, Ctrl+A, next, hint, resize, exit");
  return ok?0:1;
 }
