@@ -31,7 +31,7 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.ref_name }}
         run: test "$RELEASE_TAG" = "v$(cat VERSION)"
-      - name: Build and test real zsh / vi and the standalone UI
+      - name: Build and test the host launcher
         run: make host-check
       - name: Check memory safety
         run: make sanitize
@@ -81,7 +81,7 @@ jobs:
           nix run . -- --list
 
   release:
-    name: Publish private GitHub Release
+    name: Publish GitHub Release
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     needs: [build, nix]
     runs-on: macos-15

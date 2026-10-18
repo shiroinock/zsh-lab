@@ -4,7 +4,7 @@
 
 ## 起動・インストール
 
-Docker の Linux エンジンを起動してください。macOS では Docker Desktop / OrbStack などを使えます。Python・tmux は利用時には不要です。
+**利用には Docker CLI と、起動済みの Docker Linux エンジンが必要です。** macOS では Docker Desktop / OrbStack などを使えます。Python・tmux は利用時には不要です。
 
 Nix は macOS Apple Silicon と Linux amd64 に対応しています。Docker CLI は Nix が揃えますが、動作中の Docker エンジンは別途必要です。
 
@@ -17,8 +17,6 @@ zsh-lab
 # 更新
 nix profile upgrade zsh-lab --refresh
 ```
-
-プライベートリポジトリなので Git の GitHub 認証が必要です。`gh auth login` 済みなら `gh auth setup-git` で Git に設定できます。GitHub CLI と Nix の GitHub fetcher の認証は別です。
 
 バージョンを固定する場合：
 
@@ -122,7 +120,7 @@ PTY と内部 VT パーサーで zsh の画面を表示し、ncurses で左右�
 
 main push・PR・手動実行で macOS arm64 のバイナリと両 OS の Nix パッケージをビルドします。Linux amd64 の Docker エンジンで全23課題、Vim、隔離、完成済みランチャーからの描画・達成・遷移・ヒント・リサイズ・進捗保存・終了を検証します。macOS ランナーには Docker エンジンがないため ZIP の Docker 起動チェックを省略し、ローカルの Apple Silicon + OrbStack でも検証します。
 
-`VERSION` と一致する `v*` タグで、全ジョブ成功後にプライベート GitHub Release を作成します。ZIP と `SHA256SUMS.txt` を添付してから公開します。追加の PAT は不要です。macOS バイナリはアドホック署名で、Developer ID 署名・公証は含みません。
+`VERSION` と一致する `v*` タグで、全ジョブ成功後にGitHub Release を作成します。ZIP と `SHA256SUMS.txt` を添付してから公開します。追加の PAT は不要です。macOS バイナリはアドホック署名で、Developer ID 署名・公証は含みません。
 
 ## 参照元・ライセンス
 
