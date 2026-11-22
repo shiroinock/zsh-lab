@@ -49,7 +49,7 @@ zsh-lab --help
 
 起動用バイナリには Dockerfile と教材・アプリのビルド用ソースが入っています。ソースのチェックアウトは不要です。初回に `zsh-lab-workshop:0.3.0` をローカルで作成し、次回以降は再利用します。初回のダウンロードとビルドにはネットワークが必要です。
 
-ベースは Docker Hub 公式の Alpine Linux 3.22 で、マルチアーキテクチャの digest を固定しています。zsh・Vim 等は Alpine 公式パッケージ配布元から取得します。ビルド用のコンパイラ等は別ステージに置き、実行イメージには含めません。詳細は `container/Dockerfile` を参照してください。
+ベースは Docker Hub 公式の Alpine Linux で、マルチアーキテクチャの digest を固定しています。zsh・Vim 等は Alpine 公式パッケージ配布元から取得します。ビルド用のコンパイラ等は別ステージに置き、実行イメージには含めません。詳細は `container/Dockerfile` を参照してください。
 
 Dockerfile を変更して開発中に同じバージョンのイメージを作り直す場合：
 
