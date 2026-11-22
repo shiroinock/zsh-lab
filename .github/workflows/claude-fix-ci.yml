@@ -6,8 +6,10 @@ name: Claude で CI を直す
 on:
   # Runs from the default branch's copy of this file, with secrets; the job itself only takes
   # branches of this repository whose PR a person opened.
+  # Every workflow: the job takes only the failed runs a PR started, whatever the CI is named,
+  # and skips the shared ones it does not fix (see skip_workflows below).
   workflow_run:
-    workflows: [CI] # the name of the CI workflow to watch
+    workflows: ["**"]
     types: [completed]
 
 permissions: {}
@@ -23,5 +25,6 @@ jobs:
       id-token: write
     # with:
     #   max_attempts: 2
+    #   skip_workflows: e2e.yml # workflows not to fix, by file name
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
