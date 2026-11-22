@@ -1,4 +1,4 @@
-FROM alpine:3.22@sha256:5291449c3df73caf6ed85e649dec1b9e818b39a5d8c871e97afc13e9cd5e8fa8 AS build
+FROM alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS build
 RUN apk add --no-cache build-base ncurses-dev zsh vim
 WORKDIR /src
 COPY VERSION .
@@ -6,7 +6,7 @@ COPY src ./src
 RUN cc -O2 -Wall -Wextra -Wno-misleading-indentation -DZSHLAB_CONTAINER_BUILD -DZSHLAB_VERSION=\"$(cat VERSION)\" src/app.c -lncursesw -lutil -o /zsh-lab \
  && cc -O2 -Wno-unused-function -DZSHLAB_CONTAINER_BUILD src/tests.c -lncursesw -lutil -o /test-native
 
-FROM alpine:3.22@sha256:5291449c3df73caf6ed85e649dec1b9e818b39a5d8c871e97afc13e9cd5e8fa8 AS runtime
+FROM alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS runtime
 RUN apk add --no-cache zsh vim ncurses-terminfo-base \
  && adduser -D -u 1000 learner \
  && mkdir -p /work /state && chown learner:learner /work /state
