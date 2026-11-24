@@ -11,7 +11,7 @@ permissions: {}
 
 jobs:
   rules:
-    uses: shiroinock/workflows/.github/workflows/static-rules.yml@main
+    uses: shiroinock/workflows/.github/workflows/static-rules.yml@main # zizmor: ignore[unpinned-uses] the owner's own shared jobs, followed at main on purpose
     permissions:
       contents: read
     # with:
