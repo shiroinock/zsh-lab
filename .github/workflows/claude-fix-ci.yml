@@ -8,7 +8,7 @@ on:
   # branches of this repository whose PR a person opened.
   # Every workflow: the job takes only the failed runs a PR started, whatever the CI is named,
   # and skips the shared ones it does not fix (see skip_workflows below).
-  workflow_run:
+  workflow_run: # zizmor: ignore[dangerous-triggers] the job takes only this repository's PR branches
     workflows: ["**"]
     types: [completed]
 
@@ -16,7 +16,7 @@ permissions: {}
 
 jobs:
   fix:
-    uses: shiroinock/workflows/.github/workflows/claude-fix-ci.yml@main
+    uses: shiroinock/workflows/.github/workflows/claude-fix-ci.yml@main # zizmor: ignore[unpinned-uses] the owner's own shared jobs, followed at main on purpose
     permissions:
       contents: read
       pull-requests: write
